@@ -1,0 +1,1074 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SHTCraft 0.7 — Официальный сайт | SHToffice</title>
+<meta name="description" content="Официальный сайт игры SHTCraft 0.7. Исследуйте блочный мир, стройте, выживайте и раскрывайте тайны.">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Rajdhani:wght@300;400;500;600;700&family=Orbitron:wght@400;500;600;700;800;900&display=swap');
+
+  :root {
+    --green: #5aff5a;
+    --green-dim: #2ecc40;
+    --green-glow: rgba(90, 255, 90, 0.4);
+    --green-dark: #1a4d1a;
+    --dirt: #8B6342;
+    --stone: #8a8a8a;
+    --obsidian: #0d0d1a;
+    --bg: #060b10;
+    --panel: rgba(10, 18, 26, 0.85);
+    --border: rgba(90, 255, 90, 0.2);
+    --text: #d4e8d4;
+    --text-dim: #7a9e7a;
+    --gold: #ffcc00;
+    --gold-glow: rgba(255, 204, 0, 0.4);
+    --red: #ff4444;
+    --blue: #4af;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Rajdhani', sans-serif;
+    font-weight: 500;
+    overflow-x: hidden;
+    cursor: default;
+  }
+
+  /* ── SCROLLBAR ── */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--green-dim); border-radius: 3px; }
+
+  /* ── ANIMATED BG ── */
+  #stars-canvas {
+    position: fixed; inset: 0; z-index: 0; pointer-events: none;
+  }
+
+  .pixel-grid-bg {
+    position: fixed; inset: 0; z-index: 0; pointer-events: none;
+    background-image:
+      linear-gradient(rgba(90,255,90,0.025) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(90,255,90,0.025) 1px, transparent 1px);
+    background-size: 40px 40px;
+    animation: gridShift 30s linear infinite;
+  }
+  @keyframes gridShift {
+    0% { background-position: 0 0; }
+    100% { background-position: 40px 40px; }
+  }
+
+  /* ── NAV ── */
+  nav {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 40px;
+    height: 64px;
+    background: rgba(6, 11, 16, 0.92);
+    backdrop-filter: blur(20px);
+    border-bottom: 1px solid var(--border);
+    transition: box-shadow .3s;
+  }
+  nav.scrolled {
+    box-shadow: 0 2px 30px rgba(90,255,90,0.12);
+  }
+  .nav-logo {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 14px;
+    color: var(--green);
+    text-shadow: 0 0 12px var(--green-glow);
+    letter-spacing: 2px;
+    text-decoration: none;
+  }
+  .nav-links { display: flex; gap: 32px; list-style: none; }
+  .nav-links a {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 2px;
+    color: var(--text-dim);
+    text-decoration: none;
+    text-transform: uppercase;
+    transition: color .2s, text-shadow .2s;
+    position: relative;
+  }
+  .nav-links a::after {
+    content: '';
+    position: absolute; bottom: -4px; left: 0; right: 0; height: 1px;
+    background: var(--green);
+    transform: scaleX(0); transform-origin: left;
+    transition: transform .25s;
+  }
+  .nav-links a:hover { color: var(--green); text-shadow: 0 0 10px var(--green-glow); }
+  .nav-links a:hover::after { transform: scaleX(1); }
+
+  /* hamburger */
+  .burger { display: none; flex-direction: column; gap: 5px; cursor: pointer; padding: 4px; }
+  .burger span { display: block; width: 24px; height: 2px; background: var(--green); border-radius: 2px; transition: .3s; }
+  .burger.open span:nth-child(1) { transform: rotate(45deg) translate(5px, 5px); }
+  .burger.open span:nth-child(2) { opacity: 0; }
+  .burger.open span:nth-child(3) { transform: rotate(-45deg) translate(5px, -5px); }
+
+  .mobile-menu {
+    display: none; position: fixed; inset: 64px 0 0;
+    background: rgba(6,11,16,0.98); backdrop-filter: blur(20px);
+    z-index: 99; flex-direction: column; align-items: center; justify-content: center;
+    gap: 32px; list-style: none;
+  }
+  .mobile-menu.open { display: flex; }
+  .mobile-menu a {
+    font-family: 'Orbitron', sans-serif; font-size: 14px; font-weight: 600;
+    letter-spacing: 3px; color: var(--text-dim); text-decoration: none; text-transform: uppercase;
+    transition: color .2s;
+  }
+  .mobile-menu a:hover { color: var(--green); }
+
+  /* ── SECTIONS ── */
+  section { position: relative; z-index: 1; }
+
+  /* ── HERO ── */
+  #hero {
+    min-height: 100vh;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    text-align: center;
+    padding: 100px 24px 60px;
+    position: relative; overflow: hidden;
+  }
+  .hero-glow-ring {
+    position: absolute; width: 700px; height: 700px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(90,255,90,0.07) 0%, transparent 70%);
+    pointer-events: none; animation: pulse 4s ease-in-out infinite;
+  }
+  @keyframes pulse {
+    0%,100% { transform: scale(1); opacity: .7; }
+    50% { transform: scale(1.08); opacity: 1; }
+  }
+
+  .hero-badge {
+    display: inline-block;
+    font-family: 'Orbitron', sans-serif; font-size: 10px; font-weight: 700;
+    letter-spacing: 4px; text-transform: uppercase;
+    color: var(--green); border: 1px solid var(--border);
+    padding: 6px 18px; border-radius: 2px;
+    background: rgba(90,255,90,0.06);
+    margin-bottom: 28px;
+    animation: fadeDown .8s ease both;
+  }
+
+  .hero-logo {
+    font-family: 'Press Start 2P', monospace;
+    font-size: clamp(14px, 3vw, 22px);
+    color: var(--green-dim);
+    letter-spacing: 8px;
+    text-shadow: 0 0 20px var(--green-glow), 0 0 60px rgba(90,255,90,0.2);
+    margin-bottom: 24px;
+    animation: fadeDown .9s .1s ease both;
+  }
+
+  .hero-title {
+    font-family: 'Press Start 2P', monospace;
+    font-size: clamp(26px, 7vw, 80px);
+    line-height: 1.3;
+    background: linear-gradient(135deg, #ffffff 0%, var(--green) 50%, #00ff88 100%);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    background-clip: text;
+    filter: drop-shadow(0 0 30px rgba(90,255,90,0.5));
+    margin-bottom: 16px;
+    animation: fadeDown 1s .2s ease both;
+  }
+
+  .hero-subtitle {
+    font-family: 'Orbitron', sans-serif; font-size: clamp(11px, 2vw, 15px);
+    letter-spacing: 4px; text-transform: uppercase;
+    color: var(--text-dim); margin-bottom: 20px;
+    animation: fadeDown 1s .3s ease both;
+  }
+
+  .hero-desc {
+    font-size: clamp(16px, 2vw, 20px); font-weight: 400;
+    color: var(--text); max-width: 560px; line-height: 1.8;
+    margin-bottom: 48px;
+    animation: fadeDown 1s .4s ease both;
+  }
+
+  .btn-play {
+    position: relative; display: inline-block;
+    font-family: 'Press Start 2P', monospace;
+    font-size: clamp(11px, 2vw, 14px);
+    color: #000; background: var(--green);
+    padding: 18px 52px; border: none; cursor: pointer;
+    text-decoration: none;
+    clip-path: polygon(8px 0, 100% 0, calc(100% - 8px) 100%, 0 100%);
+    box-shadow: 0 0 30px var(--green-glow), 0 0 60px rgba(90,255,90,0.2);
+    transition: box-shadow .3s, transform .2s;
+    animation: fadeDown 1s .5s ease both;
+    letter-spacing: 2px;
+  }
+  .btn-play::before {
+    content: '▶'; position: absolute; left: 18px; top: 50%; transform: translateY(-50%);
+    font-size: 12px;
+  }
+  .btn-play:hover {
+    box-shadow: 0 0 50px var(--green-glow), 0 0 100px rgba(90,255,90,0.3);
+    transform: translateY(-3px) scale(1.02);
+  }
+  .btn-play:active { transform: translateY(0) scale(.98); }
+
+  .hero-scroll-hint {
+    position: absolute; bottom: 32px; left: 50%; transform: translateX(-50%);
+    display: flex; flex-direction: column; align-items: center; gap: 8px;
+    color: var(--text-dim); font-size: 11px; letter-spacing: 3px;
+    text-transform: uppercase; font-family: 'Orbitron', sans-serif;
+    animation: bounce 2s ease infinite;
+  }
+  .hero-scroll-hint::after {
+    content: '▼'; color: var(--green); font-size: 14px;
+  }
+  @keyframes bounce {
+    0%,100% { transform: translateX(-50%) translateY(0); }
+    50% { transform: translateX(-50%) translateY(8px); }
+  }
+
+  /* ── SECTION WRAPPER ── */
+  .section-wrap {
+    max-width: 1200px; margin: 0 auto;
+    padding: 100px 24px;
+  }
+
+  .section-label {
+    font-family: 'Orbitron', sans-serif; font-size: 10px; font-weight: 700;
+    letter-spacing: 5px; text-transform: uppercase; color: var(--green);
+    margin-bottom: 12px;
+  }
+
+  .section-title {
+    font-family: 'Press Start 2P', monospace;
+    font-size: clamp(18px, 3vw, 32px);
+    color: #fff; margin-bottom: 24px;
+    text-shadow: 0 0 20px rgba(90,255,90,0.3);
+    line-height: 1.5;
+  }
+
+  .section-divider {
+    width: 60px; height: 3px;
+    background: linear-gradient(90deg, var(--green), transparent);
+    margin-bottom: 48px;
+  }
+
+  /* reveal animation */
+  .reveal { opacity: 0; transform: translateY(40px); transition: opacity .7s ease, transform .7s ease; }
+  .reveal.visible { opacity: 1; transform: none; }
+
+  /* ── ABOUT ── */
+  #about { background: linear-gradient(180deg, transparent 0%, rgba(10,30,10,0.3) 50%, transparent 100%); }
+
+  .about-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 60px; align-items: center;
+  }
+  .about-text { font-size: 18px; line-height: 2; color: var(--text); }
+  .about-text p { margin-bottom: 16px; }
+  .about-text strong { color: var(--green); }
+
+  .about-visual {
+    position: relative; display: flex; align-items: center; justify-content: center;
+    height: 320px;
+  }
+  .pixel-block {
+    position: absolute;
+    width: 60px; height: 60px;
+    border: 2px solid rgba(90,255,90,0.3);
+    background: rgba(90,255,90,0.04);
+    animation: floatBlock linear infinite;
+  }
+  @keyframes floatBlock {
+    0% { transform: translateY(0) rotate(0deg); opacity: 0.6; }
+    50% { opacity: 1; }
+    100% { transform: translateY(-200px) rotate(45deg); opacity: 0; }
+  }
+  .about-logo-big {
+    font-family: 'Press Start 2P', monospace; font-size: 20px;
+    color: var(--green); text-shadow: 0 0 30px var(--green-glow);
+    z-index: 2; text-align: center; line-height: 2;
+  }
+
+  /* ── FEATURES ── */
+  #features { background: linear-gradient(180deg, transparent, rgba(0,20,0,0.4), transparent); }
+
+  .features-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 20px;
+  }
+
+  .feature-card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    padding: 28px 24px;
+    position: relative; overflow: hidden;
+    transition: border-color .3s, transform .3s, box-shadow .3s;
+    clip-path: polygon(0 0, calc(100% - 16px) 0, 100% 16px, 100% 100%, 16px 100%, 0 calc(100% - 16px));
+  }
+  .feature-card::before {
+    content: '';
+    position: absolute; inset: 0;
+    background: linear-gradient(135deg, rgba(90,255,90,0.06) 0%, transparent 60%);
+    opacity: 0; transition: opacity .3s;
+  }
+  .feature-card:hover {
+    border-color: rgba(90,255,90,0.5);
+    transform: translateY(-6px);
+    box-shadow: 0 12px 40px rgba(90,255,90,0.15);
+  }
+  .feature-card:hover::before { opacity: 1; }
+
+  .feature-icon {
+    font-size: 32px; margin-bottom: 14px; display: block;
+    filter: drop-shadow(0 0 8px rgba(90,255,90,0.4));
+  }
+  .feature-title {
+    font-family: 'Orbitron', sans-serif; font-size: 13px; font-weight: 700;
+    letter-spacing: 2px; color: var(--green); text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+  .feature-desc {
+    font-size: 14px; color: var(--text-dim); line-height: 1.7;
+  }
+  .feature-corner {
+    position: absolute; top: 0; right: 0;
+    width: 0; height: 0;
+    border-left: 16px solid transparent;
+    border-top: 16px solid var(--green-dim);
+    opacity: .4;
+  }
+
+  /* ── GALLERY ── */
+  #gallery { }
+
+  .gallery-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    grid-template-rows: auto;
+    gap: 12px;
+  }
+  .gallery-item {
+    position: relative; overflow: hidden;
+    border: 1px solid var(--border);
+    cursor: pointer;
+    transition: border-color .3s, box-shadow .3s;
+  }
+  .gallery-item:nth-child(1) { grid-column: span 2; }
+  .gallery-item:nth-child(5) { grid-column: span 2; }
+
+  .gallery-item:hover {
+    border-color: rgba(90,255,90,0.5);
+    box-shadow: 0 0 20px rgba(90,255,90,0.2);
+    z-index: 2;
+  }
+  .gallery-item:hover .gallery-overlay { opacity: 1; }
+  .gallery-item:hover .gal-canvas { transform: scale(1.04); }
+
+  .gal-canvas {
+    display: block; width: 100%; aspect-ratio: 16/9;
+    transition: transform .4s;
+  }
+  .gallery-overlay {
+    position: absolute; inset: 0;
+    background: rgba(90,255,90,0.08);
+    display: flex; align-items: center; justify-content: center;
+    opacity: 0; transition: opacity .3s;
+    font-family: 'Orbitron', sans-serif; font-size: 11px; font-weight: 700;
+    letter-spacing: 3px; color: var(--green); text-transform: uppercase;
+  }
+
+  /* ── VERSION ── */
+  #version {
+    background: linear-gradient(180deg, transparent, rgba(0,30,0,0.4), transparent);
+  }
+
+  .version-box {
+    max-width: 700px;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    padding: 48px;
+    position: relative; overflow: hidden;
+    clip-path: polygon(0 0, calc(100% - 24px) 0, 100% 24px, 100% 100%, 24px 100%, 0 calc(100% - 24px));
+  }
+  .version-box::before {
+    content: '';
+    position: absolute; inset: 0;
+    background: radial-gradient(circle at 80% 20%, rgba(90,255,90,0.08) 0%, transparent 60%);
+  }
+  .version-number {
+    font-family: 'Press Start 2P', monospace;
+    font-size: clamp(36px, 8vw, 72px);
+    color: var(--green);
+    text-shadow: 0 0 40px var(--green-glow), 0 0 80px rgba(90,255,90,0.2);
+    line-height: 1;
+    margin-bottom: 20px;
+  }
+  .version-label {
+    font-family: 'Orbitron', sans-serif; font-size: 11px; font-weight: 700;
+    letter-spacing: 4px; text-transform: uppercase; color: var(--text-dim);
+    margin-bottom: 24px;
+  }
+  .version-status {
+    display: inline-flex; align-items: center; gap: 10px;
+    background: rgba(90,255,90,0.1);
+    border: 1px solid rgba(90,255,90,0.3);
+    padding: 10px 24px;
+    font-family: 'Orbitron', sans-serif; font-size: 12px; font-weight: 700;
+    letter-spacing: 3px; text-transform: uppercase; color: var(--green);
+  }
+  .status-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--green);
+    box-shadow: 0 0 8px var(--green-glow);
+    animation: blink 1.5s ease-in-out infinite;
+  }
+  @keyframes blink {
+    0%,100% { opacity: 1; } 50% { opacity: 0.3; }
+  }
+
+  /* progress bars */
+  .progress-list { margin-top: 36px; display: flex; flex-direction: column; gap: 16px; }
+  .prog-item label {
+    display: flex; justify-content: space-between;
+    font-family: 'Orbitron', sans-serif; font-size: 11px; font-weight: 600;
+    letter-spacing: 2px; color: var(--text-dim); margin-bottom: 6px;
+  }
+  .prog-bar {
+    height: 6px; background: rgba(255,255,255,0.06); border-radius: 0;
+    overflow: hidden; position: relative;
+  }
+  .prog-fill {
+    height: 100%; background: linear-gradient(90deg, var(--green-dim), var(--green));
+    border-radius: 0; width: 0;
+    transition: width 1.5s cubic-bezier(.4,0,.2,1);
+    box-shadow: 0 0 6px var(--green-glow);
+  }
+
+  /* ── DEVELOPER ── */
+  #developer {
+    background: linear-gradient(180deg, transparent, rgba(0,10,0,0.3), transparent);
+  }
+
+  .dev-card {
+    display: flex; align-items: center; gap: 48px;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    padding: 48px;
+    max-width: 800px;
+    position: relative; overflow: hidden;
+  }
+  .dev-card::after {
+    content: '';
+    position: absolute; top: 0; right: 0; bottom: 0; width: 3px;
+    background: linear-gradient(180deg, transparent, var(--green), transparent);
+  }
+
+  .dev-avatar {
+    flex-shrink: 0;
+    width: 120px; height: 120px;
+    border: 2px solid var(--border);
+    position: relative; overflow: hidden;
+    display: flex; align-items: center; justify-content: center;
+    background: rgba(90,255,90,0.05);
+  }
+  .dev-avatar-inner {
+    font-size: 56px;
+    filter: drop-shadow(0 0 12px rgba(90,255,90,0.5));
+  }
+  .dev-avatar::before {
+    content: '';
+    position: absolute; inset: 0;
+    background: linear-gradient(135deg, rgba(90,255,90,0.1) 0%, transparent 50%);
+  }
+
+  .dev-info { flex: 1; }
+  .dev-role {
+    font-family: 'Orbitron', sans-serif; font-size: 10px; font-weight: 700;
+    letter-spacing: 4px; text-transform: uppercase; color: var(--green);
+    margin-bottom: 8px;
+  }
+  .dev-name {
+    font-family: 'Press Start 2P', monospace; font-size: clamp(14px, 2vw, 20px);
+    color: #fff; margin-bottom: 16px; line-height: 1.5;
+    text-shadow: 0 0 15px rgba(255,255,255,0.2);
+  }
+  .dev-desc { font-size: 16px; color: var(--text-dim); line-height: 1.8; }
+  .dev-desc strong { color: var(--text); }
+
+  .dev-tags {
+    display: flex; flex-wrap: wrap; gap: 8px; margin-top: 20px;
+  }
+  .dev-tag {
+    font-family: 'Orbitron', sans-serif; font-size: 9px; font-weight: 700;
+    letter-spacing: 2px; text-transform: uppercase;
+    padding: 5px 12px;
+    border: 1px solid rgba(90,255,90,0.25);
+    color: var(--green-dim);
+    background: rgba(90,255,90,0.04);
+  }
+
+  /* ── CONTACT ── */
+  #contact { background: linear-gradient(180deg, transparent, rgba(0,20,0,0.4), transparent); }
+
+  .contact-wrap {
+    max-width: 680px;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    padding: 60px;
+    text-align: center;
+    position: relative; overflow: hidden;
+  }
+  .contact-wrap::before {
+    content: '';
+    position: absolute; inset: 0;
+    background: radial-gradient(circle at 50% 100%, rgba(90,255,90,0.06) 0%, transparent 70%);
+  }
+  .contact-icon { font-size: 48px; margin-bottom: 20px; display: block;
+    filter: drop-shadow(0 0 12px rgba(90,255,90,0.4)); }
+  .contact-email {
+    font-family: 'Orbitron', sans-serif; font-size: 14px; font-weight: 600;
+    letter-spacing: 2px; color: var(--text);
+    margin-bottom: 36px; display: block;
+  }
+  .contact-email span { color: var(--green); }
+
+  .btn-contact {
+    display: inline-block;
+    font-family: 'Orbitron', sans-serif; font-size: 12px; font-weight: 700;
+    letter-spacing: 3px; text-transform: uppercase;
+    color: var(--green); border: 1px solid rgba(90,255,90,0.4);
+    padding: 16px 40px;
+    text-decoration: none;
+    background: rgba(90,255,90,0.05);
+    transition: all .25s;
+    position: relative; overflow: hidden;
+  }
+  .btn-contact::before {
+    content: '';
+    position: absolute; inset: 0;
+    background: var(--green);
+    transform: scaleX(0); transform-origin: left;
+    transition: transform .25s;
+    z-index: -1;
+  }
+  .btn-contact:hover { color: #000; border-color: var(--green); }
+  .btn-contact:hover::before { transform: scaleX(1); }
+
+  /* ── FOOTER ── */
+  footer {
+    position: relative; z-index: 1;
+    border-top: 1px solid var(--border);
+    padding: 40px 24px;
+    text-align: center;
+    background: rgba(6,11,16,0.9);
+  }
+  .footer-logo {
+    font-family: 'Press Start 2P', monospace; font-size: 12px;
+    color: var(--green); letter-spacing: 4px;
+    text-shadow: 0 0 10px var(--green-glow);
+    margin-bottom: 16px; display: block;
+  }
+  .footer-copy {
+    font-family: 'Orbitron', sans-serif; font-size: 10px; font-weight: 600;
+    letter-spacing: 3px; text-transform: uppercase; color: var(--text-dim);
+  }
+  .footer-line {
+    width: 80px; height: 1px;
+    background: linear-gradient(90deg, transparent, var(--green), transparent);
+    margin: 16px auto;
+  }
+
+  /* ── UTILITIES ── */
+  @keyframes fadeDown {
+    from { opacity: 0; transform: translateY(-24px); }
+    to { opacity: 1; transform: none; }
+  }
+
+  /* ── RESPONSIVE ── */
+  @media (max-width: 900px) {
+    .about-grid { grid-template-columns: 1fr; }
+    .about-visual { display: none; }
+    .gallery-grid { grid-template-columns: 1fr 1fr; }
+    .gallery-item:nth-child(1),
+    .gallery-item:nth-child(5) { grid-column: span 2; }
+    .dev-card { flex-direction: column; text-align: center; }
+    .dev-tags { justify-content: center; }
+  }
+  @media (max-width: 680px) {
+    nav { padding: 0 20px; }
+    .nav-links { display: none; }
+    .burger { display: flex; }
+    .gallery-grid { grid-template-columns: 1fr; }
+    .gallery-item:nth-child(n) { grid-column: span 1; }
+    .version-box, .contact-wrap { padding: 32px 24px; }
+    .dev-card { padding: 32px 24px; }
+    .section-wrap { padding: 72px 20px; }
+  }
+</style>
+</head>
+<body>
+
+<canvas id="stars-canvas"></canvas>
+<div class="pixel-grid-bg"></div>
+
+<!-- NAV -->
+<nav id="navbar">
+  <a class="nav-logo" href="#">SHToffice</a>
+  <ul class="nav-links">
+    <li><a href="#about">Об игре</a></li>
+    <li><a href="#features">Особенности</a></li>
+    <li><a href="#version">Версия</a></li>
+    <li><a href="#developer">Разработчик</a></li>
+    <li><a href="#contact">Контакты</a></li>
+  </ul>
+  <div class="burger" id="burger">
+    <span></span><span></span><span></span>
+  </div>
+</nav>
+<ul class="mobile-menu" id="mobile-menu">
+  <li><a href="#about" class="mm-link">Об игре</a></li>
+  <li><a href="#features" class="mm-link">Особенности</a></li>
+  <li><a href="#version" class="mm-link">Версия</a></li>
+  <li><a href="#developer" class="mm-link">Разработчик</a></li>
+  <li><a href="#contact" class="mm-link">Контакты</a></li>
+</ul>
+
+<!-- HERO -->
+<section id="hero">
+  <div class="hero-glow-ring"></div>
+  <div class="hero-badge">Официальный сайт</div>
+  <div class="hero-logo">SHToffice</div>
+  <h1 class="hero-title">SHTCraft 0.7</h1>
+  <div class="hero-subtitle">Официальный сайт игры SHTCraft 0.7</div>
+  <p class="hero-desc">Исследуйте блочный мир, стройте и раскрывайте тайны.</p>
+  <a class="btn-play" href="https://hazorfanzft-svg.github.io/SHtcraft0.7/" target="_blank" rel="noopener">Играть сейчас</a>
+  <div class="hero-scroll-hint">Прокрутите</div>
+</section>
+
+<!-- ABOUT -->
+<section id="about">
+  <div class="section-wrap">
+    <div class="reveal">
+      <div class="section-label">// 01 — about</div>
+      <h2 class="section-title">Об игре</h2>
+      <div class="section-divider"></div>
+    </div>
+    <div class="about-grid">
+      <div class="about-text reveal">
+        <p><strong>SHTCraft 0.7</strong> — это игра в стиле Minecraft, созданная <strong>Shahrom Toktobaev</strong>.</p>
+        <p>В игре присутствует блочный мир, строительство, исследование и загадочный <strong>Herobrine</strong>.</p>
+        <p>Прокладывайте собственный путь, возводите постройки и разгадывайте тайны тёмных мест.</p>
+      </div>
+      <div class="about-visual reveal" id="about-visual">
+        <div class="about-logo-big">SHT<br>CRAFT<br>0.7</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FEATURES -->
+<section id="features">
+  <div class="section-wrap">
+    <div class="reveal">
+      <div class="section-label">// 02 — features</div>
+      <h2 class="section-title">Особенности</h2>
+      <div class="section-divider"></div>
+    </div>
+    <div class="features-grid">
+      <div class="feature-card reveal" style="transition-delay:.05s">
+        <div class="feature-corner"></div>
+        <span class="feature-icon">🌍</span>
+        <div class="feature-title">Блочный мир</div>
+        <div class="feature-desc">Бесконечное пространство из блоков, готовое для исследования и построек.</div>
+      </div>
+      <div class="feature-card reveal" style="transition-delay:.1s">
+        <div class="feature-corner"></div>
+        <span class="feature-icon">🏗️</span>
+        <div class="feature-title">Строительство</div>
+        <div class="feature-desc">Создавайте структуры любой сложности из разнообразных блоков.</div>
+      </div>
+      <div class="feature-card reveal" style="transition-delay:.15s">
+        <div class="feature-corner"></div>
+        <span class="feature-icon">🗺️</span>
+        <div class="feature-title">Исследование</div>
+        <div class="feature-desc">Откройте пещеры, биомы и скрытые места, полные ресурсов.</div>
+      </div>
+      <div class="feature-card reveal" style="transition-delay:.2s">
+        <div class="feature-corner"></div>
+        <span class="feature-icon">👁️</span>
+        <div class="feature-title">Herobrine</div>
+        <div class="feature-desc">Загадочная сущность таится где-то в глубинах мира — будьте начеку.</div>
+      </div>
+      <div class="feature-card reveal" style="transition-delay:.3s">
+        <div class="feature-corner"></div>
+        <span class="feature-icon">💻</span>
+        <div class="feature-title">HTML + JavaScript</div>
+        <div class="feature-desc">Игра работает прямо в браузере — без установки, мгновенно доступна.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- VERSION -->
+<section id="version">
+  <div class="section-wrap">
+    <div class="reveal">
+      <div class="section-label">// 04 — version</div>
+      <h2 class="section-title">Версия игры</h2>
+      <div class="section-divider"></div>
+    </div>
+    <div class="version-box reveal">
+      <div class="version-label">Текущая версия</div>
+      <div class="version-number">0.7</div>
+      <div class="version-status"><span class="status-dot"></span>Активная разработка</div>
+      <div class="progress-list">
+        <div class="prog-item">
+          <label><span>Блочный движок</span><span>92%</span></label>
+          <div class="prog-bar"><div class="prog-fill" data-w="92"></div></div>
+        </div>
+        <div class="prog-item">
+          <label><span>Генерация мира</span><span>85%</span></label>
+          <div class="prog-bar"><div class="prog-fill" data-w="85"></div></div>
+        </div>
+        <div class="prog-item">
+          <label><span>AI-сущности</span><span>60%</span></label>
+          <div class="prog-bar"><div class="prog-fill" data-w="60"></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- DEVELOPER -->
+<section id="developer">
+  <div class="section-wrap">
+    <div class="reveal">
+      <div class="section-label">// 05 — developer</div>
+      <h2 class="section-title">Разработчик</h2>
+      <div class="section-divider"></div>
+    </div>
+    <div class="dev-card reveal">
+      <div class="dev-avatar">
+        <div class="dev-avatar-inner">🧑‍💻</div>
+      </div>
+      <div class="dev-info">
+        <div class="dev-role">Lead Developer &amp; Creator</div>
+        <div class="dev-name">Shahrom Toktobaev</div>
+        <div class="dev-desc">
+          Создатель проекта <strong>SHTCraft</strong> и студии <strong>SHToffice</strong>.<br>
+          Разрабатывает уникальный блочный мир в браузере, воплощая идею доступной игры для всех.
+        </div>
+        <div class="dev-tags">
+          <span class="dev-tag">Game Dev</span>
+          <span class="dev-tag">JavaScript</span>
+          <span class="dev-tag">HTML5</span>
+          <span class="dev-tag">SHToffice</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CONTACT -->
+<section id="contact">
+  <div class="section-wrap" style="display:flex;justify-content:center;">
+    <div style="width:100%;">
+      <div class="reveal">
+        <div class="section-label">// 06 — contact</div>
+        <h2 class="section-title">Контакты</h2>
+        <div class="section-divider"></div>
+      </div>
+      <div class="contact-wrap reveal" style="margin:0 auto;">
+        <span class="contact-icon">✉️</span>
+        <span class="contact-email"><span>sahromtoktobaev</span>@gmail.com</span>
+        <a class="btn-contact" href="#" id="copy-email-btn" onclick="copyEmail(event)">Скопировать email</a>
+        <div id="copy-msg" style="margin-top:16px;font-family:'Orbitron',sans-serif;font-size:11px;letter-spacing:3px;color:var(--green);opacity:0;transition:opacity .3s;">✓ Скопировано!</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <span class="footer-logo">SHToffice</span>
+  <div class="footer-line"></div>
+  <div class="footer-copy">© 2026 SHToffice — Все права защищены</div>
+</footer>
+
+<script>
+/* ── STARS ── */
+(function(){
+  const c = document.getElementById('stars-canvas');
+  const ctx = c.getContext('2d');
+  let W, H, stars = [];
+  function resize(){ W = c.width = innerWidth; H = c.height = innerHeight; }
+  function mkStars(){
+    stars = [];
+    const n = Math.floor((W*H)/5000);
+    for(let i=0;i<n;i++) stars.push({
+      x: Math.random()*W, y: Math.random()*H,
+      r: Math.random()*.8+.2,
+      a: Math.random(), da: (Math.random()-.5)*.008,
+      speed: Math.random()*.08+.02
+    });
+  }
+  function draw(){
+    ctx.clearRect(0,0,W,H);
+    for(const s of stars){
+      s.y -= s.speed;
+      if(s.y < 0) s.y = H;
+      s.a += s.da;
+      if(s.a<0||s.a>1) s.da *= -1;
+      ctx.globalAlpha = Math.max(0,Math.min(1,s.a));
+      ctx.fillStyle = '#5aff5a';
+      ctx.beginPath(); ctx.arc(s.x,s.y,s.r,0,Math.PI*2); ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+    requestAnimationFrame(draw);
+  }
+  resize(); mkStars(); draw();
+  window.addEventListener('resize', ()=>{ resize(); mkStars(); });
+})();
+
+/* ── NAV SCROLL ── */
+window.addEventListener('scroll', ()=>{
+  document.getElementById('navbar').classList.toggle('scrolled', scrollY > 20);
+});
+
+/* ── BURGER ── */
+const burger = document.getElementById('burger');
+const mmenu = document.getElementById('mobile-menu');
+burger.addEventListener('click', ()=>{
+  burger.classList.toggle('open');
+  mmenu.classList.toggle('open');
+});
+document.querySelectorAll('.mm-link').forEach(l=>{
+  l.addEventListener('click',()=>{ burger.classList.remove('open'); mmenu.classList.remove('open'); });
+});
+
+/* ── REVEAL ON SCROLL ── */
+const revealEls = document.querySelectorAll('.reveal');
+const ro = new IntersectionObserver((entries)=>{
+  entries.forEach(e=>{ if(e.isIntersecting){ e.target.classList.add('visible'); ro.unobserve(e.target); } });
+},{threshold:.12});
+revealEls.forEach(el=>ro.observe(el));
+
+/* ── PROGRESS BARS ── */
+const progObs = new IntersectionObserver((entries)=>{
+  entries.forEach(e=>{
+    if(e.isIntersecting){
+      e.target.querySelectorAll('.prog-fill').forEach(f=>{
+        f.style.width = f.dataset.w + '%';
+      });
+      progObs.unobserve(e.target);
+    }
+  });
+},{threshold:.3});
+document.querySelectorAll('.version-box').forEach(el=>progObs.observe(el));
+
+/* ── FLOATING BLOCKS IN ABOUT ── */
+(function(){
+  const vis = document.getElementById('about-visual');
+  if(!vis) return;
+  const colors = ['rgba(90,255,90,0.15)','rgba(0,200,60,0.1)','rgba(90,255,90,0.08)'];
+  for(let i=0;i<14;i++){
+    const b = document.createElement('div');
+    b.className='pixel-block';
+    const sz = 20+Math.random()*50;
+    b.style.cssText=`width:${sz}px;height:${sz}px;left:${Math.random()*80+10}%;bottom:${Math.random()*30}%;
+      background:${colors[i%3]};animation-duration:${3+Math.random()*5}s;animation-delay:${-Math.random()*6}s;`;
+    vis.appendChild(b);
+  }
+})();
+
+/* ── GALLERY CANVAS PLACEHOLDERS ── */
+(function(){
+  const scenes = [
+    (ctx,w,h)=>{
+      // overworld landscape
+      const sky = ctx.createLinearGradient(0,0,0,h*.6);
+      sky.addColorStop(0,'#0a1a2e'); sky.addColorStop(1,'#0d3b1a');
+      ctx.fillStyle=sky; ctx.fillRect(0,0,w,h);
+      // sun
+      ctx.fillStyle='rgba(255,220,80,0.8)'; ctx.beginPath(); ctx.arc(w*.75,h*.22,22,0,Math.PI*2); ctx.fill();
+      ctx.fillStyle='rgba(255,220,80,0.2)'; ctx.beginPath(); ctx.arc(w*.75,h*.22,38,0,Math.PI*2); ctx.fill();
+      // ground blocks
+      const bw=w/16;
+      for(let x=0;x<16;x++){
+        const row = 6+Math.floor(Math.sin(x*.6)*2);
+        for(let y=row;y<10;y++){
+          const c=['#2d7a2d','#5c3d1e','#4a4a4a','#5c3d1e'];
+          ctx.fillStyle=c[y===row?0:y===row+1?1:2]; ctx.fillRect(x*bw,y*(h/10),bw-1,h/10-1);
+          ctx.fillStyle='rgba(255,255,255,0.05)'; ctx.fillRect(x*bw,y*(h/10),bw-1,3);
+        }
+      }
+      // label
+      ctx.fillStyle='rgba(90,255,90,0.8)'; ctx.font=`bold ${h/14}px monospace`;
+      ctx.fillText('SCHTCRAFT 0.7',12,h*.14);
+    },
+    (ctx,w,h)=>{
+      // night / build scene
+      ctx.fillStyle='#060d1a'; ctx.fillRect(0,0,w,h);
+      // stars
+      for(let i=0;i<60;i++){
+        ctx.fillStyle=`rgba(255,255,255,${Math.random()*.7+.2})`;
+        ctx.fillRect(Math.random()*w, Math.random()*h*.55, 1,1);
+      }
+      // moon
+      ctx.fillStyle='rgba(220,230,255,0.9)'; ctx.beginPath(); ctx.arc(w*.2,h*.18,16,0,Math.PI*2); ctx.fill();
+      // building
+      const bw=w/20;
+      const palette=['#5c3d1e','#4a7a4a','#888','#6a6a6a'];
+      for(let x=4;x<16;x++){
+        const h2 = h*.4 + Math.floor(Math.sin(x)*h*.12);
+        for(let y2=h2;y2<h;y2+=bw){
+          ctx.fillStyle=palette[Math.floor(Math.random()*palette.length)];
+          ctx.fillRect(x*bw,y2,bw-2,bw-2);
+        }
+      }
+      ctx.fillStyle='rgba(90,255,90,0.6)'; ctx.font=`bold ${h/14}px monospace`;
+      ctx.fillText('СТРОИТЕЛЬСТВО',12,h*.13);
+    },
+    (ctx,w,h)=>{
+      // cave
+      ctx.fillStyle='#08080f'; ctx.fillRect(0,0,w,h);
+      const grad=ctx.createRadialGradient(w*.5,h*.4,10,w*.5,h*.4,h*.5);
+      grad.addColorStop(0,'rgba(90,255,90,0.18)'); grad.addColorStop(1,'transparent');
+      ctx.fillStyle=grad; ctx.fillRect(0,0,w,h);
+      // stone blocks
+      for(let x=0;x<14;x++) for(let y=0;y<8;y++){
+        if(Math.random()>.35){
+          const l=Math.floor(40+Math.random()*30);
+          ctx.fillStyle=`rgb(${l},${l},${l})`;
+          const bw=w/14, bh=h/8;
+          ctx.fillRect(x*bw,y*bh,bw-2,bh-2);
+        }
+      }
+      // ore veins
+      for(let i=0;i<8;i++){
+        ctx.fillStyle='rgba(90,255,90,0.5)';
+        ctx.fillRect(Math.random()*w,Math.random()*h,8,8);
+      }
+      ctx.fillStyle='rgba(90,255,90,0.7)'; ctx.font=`bold ${h/14}px monospace`;
+      ctx.fillText('ПЕЩЕРЫ',12,h*.16);
+    },
+    (ctx,w,h)=>{
+      // blocks showcase
+      const bg=ctx.createLinearGradient(0,0,0,h);
+      bg.addColorStop(0,'#0a1208'); bg.addColorStop(1,'#060d06');
+      ctx.fillStyle=bg; ctx.fillRect(0,0,w,h);
+      const blockTypes=[
+        ['#5c3d1e','#7a5230','#3d2910'], // dirt
+        ['#2d7a2d','#3a9e3a','#1a5c1a'], // grass
+        ['#888','#aaa','#666'],           // stone
+        ['#6a5020','#8a6830','#4a3810'], // wood
+        ['#4a8f8f','#5ab0b0','#2a6060'], // water
+        ['#ffcc00','#ffe066','#cc9900'], // gold ore
+      ];
+      const bw=Math.floor(w/8), bh=Math.floor(h/5);
+      for(let row=0;row<5;row++){
+        for(let col=0;col<8;col++){
+          const bt=blockTypes[(row*8+col)%blockTypes.length];
+          const bx=col*bw, by=row*bh;
+          ctx.fillStyle=bt[0]; ctx.fillRect(bx,by,bw-2,bh-2);
+          ctx.fillStyle=bt[1]; ctx.fillRect(bx,by,bw-2,4); // top highlight
+          ctx.fillStyle=bt[2]; ctx.fillRect(bx,by+bh-6,bw-2,4); // bottom shadow
+          ctx.fillStyle='rgba(255,255,255,0.04)';
+          ctx.fillRect(bx,by,4,bh-2); // left highlight
+        }
+      }
+      // grid overlay
+      ctx.strokeStyle='rgba(0,0,0,0.3)'; ctx.lineWidth=2;
+      for(let col=0;col<=8;col++){ ctx.beginPath(); ctx.moveTo(col*bw,0); ctx.lineTo(col*bw,h); ctx.stroke(); }
+      for(let row=0;row<=5;row++){ ctx.beginPath(); ctx.moveTo(0,row*bh); ctx.lineTo(w,row*bh); ctx.stroke(); }
+      ctx.fillStyle='rgba(90,255,90,0.8)'; ctx.font=`bold ${h/14}px monospace`;
+      ctx.fillText('БЛОКИ',12,h*.14);
+    },
+    (ctx,w,h)=>{
+      // herobrine darkness
+      ctx.fillStyle='#030308'; ctx.fillRect(0,0,w,h);
+      // fog
+      const fog=ctx.createRadialGradient(w*.5,h*.5,0,w*.5,h*.5,w*.6);
+      fog.addColorStop(0,'rgba(20,0,0,0)'); fog.addColorStop(1,'rgba(5,0,10,0.9)');
+      ctx.fillStyle=fog; ctx.fillRect(0,0,w,h);
+      // Herobrine figure silhouette
+      const cx=w*.5, cy=h*.35;
+      ctx.fillStyle='rgba(30,30,30,0.95)';
+      // body
+      ctx.fillRect(cx-15,cy,30,40); // torso
+      ctx.fillRect(cx-10,cy-22,20,22); // head
+      // glowing white eyes
+      ctx.fillStyle='rgba(255,255,255,0.95)'; ctx.fillRect(cx-7,cy-16,5,5); ctx.fillRect(cx+2,cy-16,5,5);
+      ctx.fillStyle='rgba(255,255,255,0.3)'; ctx.fillRect(cx-9,cy-18,9,9); ctx.fillRect(cx,cy-18,9,9);
+      // glow around eyes
+      const eg=ctx.createRadialGradient(cx,cy-14,0,cx,cy-14,30);
+      eg.addColorStop(0,'rgba(255,255,255,0.15)'); eg.addColorStop(1,'transparent');
+      ctx.fillStyle=eg; ctx.fillRect(0,0,w,h);
+      ctx.fillStyle='rgba(200,50,50,0.85)'; ctx.font=`bold ${h/14}px monospace`;
+      ctx.fillText('HEROBRINE',12,h*.14);
+    },
+    (ctx,w,h)=>{
+      // inventory / resources
+      const bg=ctx.createLinearGradient(0,0,0,h);
+      bg.addColorStop(0,'#0a0f1a'); bg.addColorStop(1,'#0d1a0d');
+      ctx.fillStyle=bg; ctx.fillRect(0,0,w,h);
+      const items=[
+        {c:'#2d7a2d',label:'Дерево'},{c:'#5c3d1e',label:'Земля'},{c:'#888',label:'Камень'},
+        {c:'#4a8f8f',label:'Вода'},{c:'#c44',label:'Лава'},{c:'#ffcc00',label:'Золото'},
+        {c:'#44aaff',label:'Лёд'},{c:'#8f4f8f',label:'Руда'}
+      ];
+      const cols=4, cw=w/cols, ch=h/2;
+      items.forEach((it,i)=>{
+        const col=i%cols, row=Math.floor(i/cols);
+        const bx=col*cw+cw*.15, by=row*ch+ch*.15, bw2=cw*.7, bh2=ch*.55;
+        ctx.fillStyle='rgba(255,255,255,0.06)'; ctx.fillRect(bx-2,by-2,bw2+4,bh2+4);
+        ctx.fillStyle=it.c; ctx.fillRect(bx,by,bw2,bh2);
+        ctx.fillStyle='rgba(255,255,255,0.15)'; ctx.fillRect(bx,by,bw2,4);
+        ctx.fillStyle='rgba(0,0,0,0.4)'; ctx.fillRect(bx,by+bh2-4,bw2,4);
+        ctx.fillStyle='rgba(255,255,255,0.7)'; ctx.font=`${h/20}px monospace`;
+        ctx.fillText(it.label,bx+2,by+bh2+h/20+2);
+      });
+      ctx.fillStyle='rgba(90,255,90,0.8)'; ctx.font=`bold ${h/14}px monospace`;
+      ctx.fillText('РЕСУРСЫ',12,h*.1);
+    }
+  ];
+
+  function drawScene(id, index){
+    const cv = document.getElementById(id);
+    if(!cv) return;
+    const parent = cv.parentElement;
+    const W = parent.offsetWidth || 400;
+    const H = Math.round(W * 9/16);
+    cv.width = W; cv.height = H;
+    const ctx = cv.getContext('2d');
+    scenes[index](ctx, W, H);
+  }
+
+  function drawAll(){
+    for(let i=1;i<=6;i++) drawScene('gc'+i, i-1);
+  }
+  drawAll();
+  window.addEventListener('resize', drawAll);
+})();
+/* ── COPY EMAIL ── */
+function copyEmail(e){
+  e.preventDefault();
+  navigator.clipboard.writeText('sahromtoktobaev@gmail.com').then(()=>{
+    const msg = document.getElementById('copy-msg');
+    msg.style.opacity = '1';
+    setTimeout(()=>{ msg.style.opacity = '0'; }, 2500);
+  });
+}
+</script>
+</body>
+</html>
